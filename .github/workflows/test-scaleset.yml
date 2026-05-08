@@ -1,0 +1,13 @@
+name: Test Runner Scale Set
+on: workflow_dispatch
+
+jobs:
+  test:
+    runs-on: arc-runner-set-repo
+    steps:
+      - name: Hello from scale set
+        run: |
+          echo "✅ Hello from an ephemeral runner scale set pod!"
+          echo "Hostname: $(hostname)"
+          echo "OS: $(uname -a)"
+          echo "This pod will be destroyed after this job completes."
