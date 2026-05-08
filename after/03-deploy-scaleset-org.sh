@@ -15,8 +15,8 @@ set -e
 # --- Configuration -----------------------------------------------------------
 INSTALLATION_NAME="arc-runner-set-org"     # This becomes the 'runs-on' value!
 NAMESPACE="arc-runners-org"                 # Separate namespace for org runners
-GITHUB_CONFIG_URL="https://github.com/your-org"
-GITHUB_PAT="<your-pat-here>"              # Needs admin:org scope
+GITHUB_CONFIG_URL="https://github.com/seandorsett"
+GITHUB_PAT="${GITHUB_PAT:?Error: Set GITHUB_PAT environment variable}"              # Needs admin:org scope
 
 echo "🚀 Deploying Runner Scale Set (Organization Level)"
 echo "===================================================="
@@ -27,7 +27,7 @@ echo "  Runner Group:   production-runners"
 echo ""
 
 # --- Deploy the runner scale set ---------------------------------------------
-helm install "${INSTALLATION_NAME}" \
+helm upgrade --install "${INSTALLATION_NAME}" \
   --namespace "${NAMESPACE}" \
   --create-namespace \
   --values values-org.yaml \

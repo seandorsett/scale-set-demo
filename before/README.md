@@ -4,6 +4,23 @@
 
 This directory demonstrates the **traditional approach** to self-hosted runners in GitHub Actions. This is the method that Runner Scale Sets aims to replace.
 
+## 🖥️ Live Demo
+
+Use this section when you want to show the **simulated traditional workflow experience** during the presentation.
+
+- These "before" workflows run on `ubuntu-latest` to simulate the traditional self-hosted pattern without depending on your local ARC cluster
+- Trigger a workflow with:
+
+```bash
+gh workflow run "workflow-name" --repo seandorsett/super-tribble
+```
+
+What to point out during the demo:
+
+- The workflow represents the old model conceptually, even though it runs on GitHub-hosted infrastructure for demo convenience
+- Highlight the extra cleanup logic and explain that persistent runners usually need manual cleanup to avoid dirty state
+- Contrast this with the "after" demo where a real runner pod is created in Kubernetes and then destroyed
+
 ## What's Here
 
 | File | Purpose |

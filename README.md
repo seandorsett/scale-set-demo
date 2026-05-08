@@ -2,6 +2,54 @@
 
 > **A before-and-after comparison of self-hosted runner management**
 
+## 🖥️ Live Demo Setup
+
+This presentation is ready for a **real-time ARC demo** against a live Kubernetes cluster.
+
+### Prerequisites already met
+
+- Kubernetes cluster is running
+- ARC controller is installed in the `arc-systems` namespace
+- Runner scale set `arc-runner-set-repo` is deployed in the `arc-runners` namespace
+- GitHub repository is `seandorsett/super-tribble`
+
+### Verify before you present
+
+```bash
+kubectl get pods -n arc-systems
+```
+
+Optional quick checks:
+
+```bash
+kubectl get pods -n arc-runners
+gh workflow list --repo seandorsett/super-tribble
+```
+
+### Keep these commands ready during the demo
+
+Open one terminal to watch ARC and runner activity:
+
+```bash
+kubectl get pods -n arc-runners -w
+```
+
+Use a second terminal for GitHub workflow triggers:
+
+```bash
+gh workflow run "workflow-name" --repo seandorsett/super-tribble
+gh run list --repo seandorsett/super-tribble --limit 5
+```
+
+What you want the audience to see:
+
+- The controller is already healthy in `arc-systems`
+- A workflow is triggered from the GitHub Actions tab or with `gh workflow run`
+- A runner pod appears in `arc-runners`
+- The pod disappears after the job completes, proving the runner is ephemeral
+
+---
+
 ## 📋 What This Demo Covers
 
 This repository provides a complete **presentation-ready demo** comparing:
@@ -58,6 +106,7 @@ This repository provides a complete **presentation-ready demo** comparing:
 - Point out the cleanup step — "Why do we need this?"
 - Open `before/workflow-org-level.yml`
 - Discuss shared state concerns with org-level runners
+- **LIVE DEMO:** Trigger the "before" workflow to show the simulated traditional approach
 
 ### Slide 3: The Architecture Problem
 
@@ -103,6 +152,7 @@ This repository provides a complete **presentation-ready demo** comparing:
   - `runs-on: arc-runner-set-repo` (name, not labels)
   - No cleanup step needed
   - Same actions, simpler workflow
+- **LIVE DEMO:** Trigger the "after" workflow from the GitHub Actions tab, then run `kubectl get pods -n arc-runners` to watch the pod appear and disappear
 
 ### Slide 8: Scaling Behavior
 
@@ -161,6 +211,33 @@ This repository provides a complete **presentation-ready demo** comparing:
 ## ⚠️ Demo Notes
 
 - This demo is **reference/illustrative** — scripts are annotated for presentation
-- No live Kubernetes cluster is required to walk through the concepts
+- A live Kubernetes cluster is optional for the talk-through, but recommended for the full ARC pod lifecycle demo
 - All scripts include comments marked with `PRESENTATION TALKING POINT` for easy reference
 - The `diagrams/` folder contains text-based diagrams suitable for terminal display or copying into slides
+
+---
+
+## Demo Commands Cheat Sheet
+
+```bash
+# Verify ARC controller is healthy
+kubectl get pods -n arc-systems
+
+# Check runner scale set namespace before starting
+kubectl get pods -n arc-runners
+
+# Watch runner pods appear/disappear live
+kubectl get pods -n arc-runners -w
+
+# See recent workflow runs
+gh run list --repo seandorsett/super-tribble --limit 10
+
+# Trigger a traditional "before" workflow
+gh workflow run "workflow-name" --repo seandorsett/super-tribble
+
+# Trigger an ARC-backed "after" workflow
+gh workflow run "workflow-name" --repo seandorsett/super-tribble
+
+# Inspect a specific run after triggering
+gh run view --repo seandorsett/super-tribble
+```

@@ -13,7 +13,7 @@
 runnerScaleSetName: "arc-runner-set-org"
 
 ## GitHub configuration — targets the organization
-githubConfigUrl: "https://github.com/your-org"
+githubConfigUrl: "https://github.com/seandorsett"
 
 ## Authentication — GitHub App recommended for org-level (better security)
 ## Create secret: kubectl create secret generic github-app-secret \

@@ -4,6 +4,36 @@
 
 This directory demonstrates the **modern approach** to self-hosted runners using **Actions Runner Controller (ARC)** and **Runner Scale Sets**. This replaces the manual, static approach with declarative, auto-scaling infrastructure.
 
+## 🖥️ Live Demo
+
+This is the part of the presentation that uses the **actual runner scale set** on your local Kubernetes cluster.
+
+- ARC controller is running in `arc-systems`
+- Runner scale set `arc-runner-set-repo` is running in `arc-runners`
+- Workflows target the real scale set, so the audience can watch runner pods get created and removed live
+
+Trigger a workflow from GitHub Actions or with:
+
+```bash
+gh workflow run "workflow-name" --repo seandorsett/super-tribble
+```
+
+While the workflow starts, watch the cluster with:
+
+```bash
+kubectl get pods -n arc-runners
+kubectl get pods -n arc-runners -w
+```
+
+What to show:
+
+- The listener/controller is already in place before the workflow starts
+- A new runner pod appears in `arc-runners` when the workflow is queued
+- The pod exists only for the duration of the job
+- After the run completes, the runner pod is destroyed automatically
+
+This is the key "aha" moment: **run workflow → watch pod appear → job finishes → pod disappears**.
+
 ## What's Here
 
 | File | Purpose |

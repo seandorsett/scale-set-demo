@@ -15,11 +15,16 @@ set -e
 
 # --- Configuration -----------------------------------------------------------
 RUNNER_VERSION="2.319.1"
-GITHUB_ORG="your-org"
-GITHUB_REPO="your-repo"
+GITHUB_CONFIG_URL="https://github.com/seandorsett/super-tribble"
 RUNNER_NAME="self-hosted-runner-$(hostname)"
 RUNNER_LABELS="self-hosted,linux,x64"
 RUNNER_WORK_DIR="_work"
+
+if [[ -z "${GITHUB_PAT:-}" ]]; then
+  echo "❌ GITHUB_PAT environment variable is required"
+  echo "   Example: export GITHUB_PAT=ghp_xxx"
+  exit 1
+fi
 
 # --- Step 1: Download the runner package -------------------------------------
 # PAIN POINT: Manual version management — you must track and update versions
@@ -31,32 +36,29 @@ tar xzf ./actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz
 
 # --- Step 2: Generate a registration token -----------------------------------
 # PAIN POINT: Tokens expire after 1 hour — automation is fragile
-# PAIN POINT: Requires a PAT with admin:org or repo scope
+# PAIN POINT: Requires a PAT with repo admin permissions, passed in via env var
 echo "🔑 Generating registration token..."
-echo "    NOTE: You must provide a PAT with appropriate permissions"
-echo "    For repo-level:  admin:repo scope"
-echo "    For org-level:   admin:org scope"
+echo "    NOTE: Provide a PAT through the GITHUB_PAT environment variable"
+echo "    Example: export GITHUB_PAT=ghp_xxx"
 
-# Repo-level registration token
 REG_TOKEN=$(curl -s -X POST \
   -H "Authorization: token ${GITHUB_PAT}" \
   -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/${GITHUB_ORG}/${GITHUB_REPO}/actions/runners/registration-token" \
+  "https://api.github.com/repos/seandorsett/super-tribble/actions/runners/registration-token" \
   | jq -r '.token')
 
-# Org-level registration token (alternative)
-# REG_TOKEN=$(curl -s -X POST \
-#   -H "Authorization: token ${GITHUB_PAT}" \
-#   -H "Accept: application/vnd.github+json" \
-#   "https://api.github.com/orgs/${GITHUB_ORG}/actions/runners/registration-token" \
-#   | jq -r '.token')
+if [[ -z "${REG_TOKEN}" || "${REG_TOKEN}" == "null" ]]; then
+  echo "❌ Failed to retrieve registration token"
+  echo "   Check that GITHUB_PAT is set and has the required repository permissions."
+  exit 1
+fi
 
 # --- Step 3: Configure the runner --------------------------------------------
 # PAIN POINT: Interactive prompts or complex flag combinations
 # PAIN POINT: No declarative configuration — imperative setup only
 echo "⚙️  Configuring runner..."
 ./config.sh \
-  --url "https://github.com/${GITHUB_ORG}/${GITHUB_REPO}" \
+  --url "${GITHUB_CONFIG_URL}" \
   --token "${REG_TOKEN}" \
   --name "${RUNNER_NAME}" \
   --labels "${RUNNER_LABELS}" \
