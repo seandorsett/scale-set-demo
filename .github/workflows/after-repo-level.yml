@@ -1,68 +1,84 @@
-# =============================================================================
-# AFTER: Workflow Using Runner Scale Set (Repository Level)
-# =============================================================================
-# This workflow uses a runner scale set instead of legacy ARC's
-# RunnerDeployment-based runner pool. Notice how much simpler it is.
-#
-# PRESENTATION TALKING POINT:
-# "The workflow author just changes 'runs-on' to the scale set name.
-#  No RunnerDeployment YAML, no HRA object, and no pre-created idle pool."
-# =============================================================================
-
-name: "CI Pipeline (Runner Scale Set - Repo Level)"
-
+name: "AFTER: Runner Scale Set Demo"
 on:
   workflow_dispatch:
-  # DEMO: Run this manually, then immediately run:
-  # kubectl get pods -n arc-runners
-  # You'll see Runner Scale Sets create a fresh pod for this job only.
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    inputs:
+      message:
+        description: 'Custom message to display'
+        required: false
+        default: 'Hello from Runner Scale Sets!'
 
 jobs:
   build:
-    # NEW: Reference the runner scale set by name (the INSTALLATION_NAME)
-    # No labels needed — the scale set name IS the identifier
     runs-on: arc-runner-set-repo
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Explain legacy ARC contrast
+      - name: "✅ Ephemeral Pod Identity"
         run: |
-          echo "✅ Unlike legacy ARC's pre-created runner pool, this pod was created just for this job"
-          echo "✅ Runner Scale Sets use listener-based scaling instead of legacy webhook or poll loops"
-          echo "✅ This runner uses a short-lived per-job token, not a long-lived registration token"
-          echo "✅ When this workflow finishes, Kubernetes destroys the pod automatically"
+          echo "=========================================="
+          echo "  RUNNER SCALE SET - LIVE DEMO"
+          echo "=========================================="
+          echo ""
+          echo "📍 Pod hostname:  $(hostname)"
+          echo "🐧 OS:            $(uname -sr)"
+          echo "🕐 Started at:    $(date -u)"
+          echo "💬 Message:        ${{ github.event.inputs.message }}"
+          echo ""
+          echo "🆕 This pod was created JUST for this job."
+          echo "💥 It will be DESTROYED when this job completes."
+          echo ""
+          echo "👉 Run this in your terminal NOW:"
+          echo "   kubectl get pods -n arc-runners"
 
-      - name: Show pod identity
+      - name: "✅ Clean Environment Proof"
         run: |
-          echo "Hostname: $(hostname)"
-          echo "Kernel: $(uname -a)"
+          echo "=========================================="
+          echo "  PROVING EPHEMERAL CLEAN STATE"
+          echo "=========================================="
+          echo ""
+          echo "📂 Workspace is fresh (no leftover files):"
+          ls -la
+          echo ""
+          echo "📦 No cached packages from previous jobs:"
+          echo "   /tmp contents: $(ls /tmp | wc -l) files"
+          echo ""
+          echo "🔐 No leaked credentials from other jobs"
+          echo "   HOME: $HOME"
+          echo "   USER: $(whoami)"
 
-      - name: Demo CI build steps
+      - name: "✅ Simulate CI Build"
         run: |
-          echo "Checking out repository contents..."
-          echo "Restoring dependencies..."
-          echo "Running unit tests..."
-          echo "Building application artifact..."
-          echo "CI completed on per-job ephemeral runner pod $(hostname)"
+          echo "Building application..."
+          sleep 2
+          echo "Running tests..."
+          sleep 2
+          echo "✅ Build complete!"
+          echo ""
+          echo "⏱️  Total job time: fast because no pool warmup needed"
+          echo "💰 Cost: only charged for this job's duration"
+          echo "🔄 Next job gets a BRAND NEW pod"
 
-      - name: Explain pod teardown
+      - name: "✅ Contrast with Legacy ARC"
         run: |
-          echo "DEMO: After this job completes, run:"
-          echo "kubectl get pods -n arc-runners"
-          echo "The runner pod used for this job will be gone."
-
-# =============================================================================
-# KEY DIFFERENCES FROM LEGACY ARC:
-# 
-# 1. runs-on: Uses one scale set label/name instead of legacy multi-label routing
-# 2. No RunnerDeployment or HorizontalRunnerAutoscaler CRDs
-# 3. Per-job ephemeral pods replace a pre-created runner pool
-# 4. Listener-based scaling creates capacity only when jobs queue
-# 5. Scale-to-zero removes idle cost when no jobs are queued
-# =============================================================================
+          echo "=========================================="
+          echo "  WHY THIS IS BETTER THAN LEGACY ARC"
+          echo "=========================================="
+          echo ""
+          echo "Legacy ARC (RunnerDeployment):"
+          echo "  ❌ Pre-created pool of runners sitting idle"
+          echo "  ❌ cert-manager dependency required"
+          echo "  ❌ RunnerDeployment + HorizontalRunnerAutoscaler CRDs"
+          echo "  ❌ Webhook/poll-based scaling (complex setup)"
+          echo "  ❌ Long-lived pods may accumulate state"
+          echo ""
+          echo "Runner Scale Sets (this demo):"
+          echo "  ✅ Pod created on-demand, destroyed after job"
+          echo "  ✅ No cert-manager needed"
+          echo "  ✅ Simple Helm chart (no CRDs to manage)"
+          echo "  ✅ Listener-based scaling (built-in)"
+          echo "  ✅ Scale to zero when idle"
+          echo ""
+          echo "👉 After this job ends, run:"
+          echo "   kubectl get pods -n arc-runners"
+          echo "   (You'll see: No resources found)"

@@ -1,4 +1,4 @@
-name: Test Runner Scale Set
+name: Quick: Scale Set Smoke Test
 on: workflow_dispatch
 
 jobs:

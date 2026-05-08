@@ -1,53 +1,40 @@
-# =============================================================================
-# BEFORE: Legacy ARC Workflow (Repository Level)
-# =============================================================================
-# This workflow is for the live demo. It runs on ubuntu-latest so it can be
-# triggered reliably, but the comments and log output describe the OLD
-# RunnerDeployment-based ARC experience.
-# =============================================================================
+# THIS FILE IS FOR PRESENTATION REFERENCE ONLY
+# It is NOT in .github/workflows/ — it cannot be triggered
+# Walk through this file on screen to show what legacy ARC workflows looked like
 
-name: "CI Pipeline (Legacy ARC - Repo Level)"
+name: "BEFORE: Legacy ARC Repo Workflow"
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    # LIVE DEMO NOTE:
-    # We are NOT running legacy ARC in the demo environment.
-    # With legacy ARC, this would typically have looked like:
-    # runs-on: [self-hosted, linux, x64, legacy-arc, repo-demo]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, legacy-arc, repo-demo]
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Explain legacy ARC repo-level model
+      - name: Show runner identity
         run: |
-          echo "🎭 LIVE DEMO: Simulating legacy ARC at the repository level"
-          echo "Real legacy ARC used RunnerDeployment labels to route jobs."
-          echo "Runners were often pre-created as a warm pool before jobs arrived."
-          echo "That means idle runners still consumed cluster resources."
-          echo "Scaling usually required HorizontalRunnerAutoscaler plus extra tuning."
+          echo "Legacy ARC repository runner"
+          echo "Hostname: $(hostname)"
+          echo "Kernel: $(uname -sr)"
+          echo "Repository: $GITHUB_REPOSITORY"
 
-      - name: Highlight repo-level pain points
+      - name: Restore dependencies
         run: |
-          echo "Legacy ARC repo-level pain points:"
-          echo "- Labels assigned on the RunnerDeployment CRD"
-          echo "- Long-lived runner pods handled multiple jobs over time"
-          echo "- Complex webhook or pull-based autoscaling configuration"
-          echo "- More YAML and CRD management for platform teams"
+          echo "Restoring application dependencies"
+          echo "Preparing build toolchain on long-lived runner"
 
-      - name: Simulate build
+      - name: Run build and test
         run: |
-          echo "🔧 Simulating a build on a legacy ARC runner"
-          echo "In reality, this job may have landed on an already-running pooled runner."
-          echo "If the warm pool is oversized, you pay idle cost."
-          echo "If the autoscaler is misconfigured, jobs queue anyway."
+          echo "Running unit tests"
+          echo "Building application artifact"
+          echo "Publishing test summary"
 
-      - name: Summarize before-state overhead
+      - name: Publish legacy ARC notes
         run: |
-          echo "Before state summary:"
-          echo "Legacy ARC = RunnerDeployment + RunnerReplicaSet + Runner + HRA"
-          echo "Plus cert-manager, controller management, and scaling complexity"
+          echo "This workflow targeted a pre-created RunnerDeployment-backed pool."
+          echo "The same runner pod could process multiple jobs over time."
+          echo "Scaling behavior was managed separately through HorizontalRunnerAutoscaler."

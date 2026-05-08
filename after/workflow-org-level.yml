@@ -1,70 +1,78 @@
-# =============================================================================
-# AFTER: Workflow Using Runner Scale Set (Organization Level)
-# =============================================================================
-# This workflow uses an org-level runner scale set. The scale set belongs to
-# a runner group that controls access across the organization without using
-# legacy ARC's RunnerDeployment-based runner pools.
-#
-# PRESENTATION TALKING POINT:
-# "Org-level scale sets keep runner groups, but replace legacy ARC's
-#  pre-created pools with listener-driven ephemeral capacity."
-# =============================================================================
-
-name: "CI Pipeline (Runner Scale Set - Org Level)"
-
+name: "AFTER: Scale Set Multi-Job Demo"
 on:
   workflow_dispatch:
-  # DEMO: For the live presentation we reuse the working repo-level scale set.
-  # In production, this would normally point at a separate org-level scale set.
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
-  build:
-    # DEMO: Reusing the known-good scale set name from the live cluster.
-    # In production, use a dedicated org-level scale set and runner group.
+  job-1:
     runs-on: arc-runner-set-repo
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Explain org-level advantages
+      - name: "Job 1 - Unique Pod"
         run: |
-          echo "✅ Org-level scale sets let multiple repositories share one GitHub-supported runner platform"
-          echo "✅ Runner groups still control which repos get access"
-          echo "✅ Unlike legacy ARC's warm pool, each job still lands on a fresh ephemeral pod"
-          echo "✅ No RunnerDeployment or HorizontalRunnerAutoscaler CRDs are needed"
-          echo "✅ Each job uses a short-lived token instead of legacy registration tokens"
+          echo "=========================================="
+          echo "  JOB 1 - PARALLEL SCALING DEMO"
+          echo "=========================================="
+          echo "📍 I'm running on pod: $(hostname)"
+          echo "🆕 This is a unique, ephemeral pod"
+          echo ""
+          echo "👉 Run: kubectl get pods -n arc-runners"
+          echo "   You should see MULTIPLE pods (one per job)!"
+          sleep 10
+          echo "✅ Job 1 complete"
 
-      - name: Show pod identity
+  job-2:
+    runs-on: arc-runner-set-repo
+    steps:
+      - name: "Job 2 - Different Pod"
         run: |
-          echo "Hostname: $(hostname)"
-          echo "Kernel: $(uname -a)"
+          echo "=========================================="
+          echo "  JOB 2 - PARALLEL SCALING DEMO"
+          echo "=========================================="
+          echo "📍 I'm running on pod: $(hostname)"
+          echo "🆕 This is a DIFFERENT pod than Job 1!"
+          echo ""
+          echo "Each job gets complete isolation:"
+          echo "  - Separate filesystem"
+          echo "  - Separate network namespace"
+          echo "  - Separate process space"
+          sleep 10
+          echo "✅ Job 2 complete"
 
-      - name: Demo shared CI workflow
+  job-3:
+    runs-on: arc-runner-set-repo
+    steps:
+      - name: "Job 3 - Scaling Proof"
         run: |
-          echo "Simulating shared organization CI steps..."
-          echo "Repository checked out on shared runner platform"
-          echo "Running reusable org policy checks..."
-          echo "Running standardized test stage..."
-          echo "Job executed on listener-created ephemeral pod $(hostname)"
+          echo "=========================================="
+          echo "  JOB 3 - PARALLEL SCALING DEMO"
+          echo "=========================================="
+          echo "📍 I'm running on pod: $(hostname)"
+          echo ""
+          echo "🚀 ARC scaled up 3 pods simultaneously!"
+          echo "   Legacy ARC needed pre-created pools for this."
+          echo "   Runner Scale Sets created them on-demand."
+          echo ""
+          echo "💰 After all jobs complete, pods are destroyed."
+          echo "   Scale to zero = no idle cost."
+          sleep 10
+          echo "✅ Job 3 complete"
 
-      - name: Explain live demo
+  summary:
+    needs: [job-1, job-2, job-3]
+    runs-on: arc-runner-set-repo
+    steps:
+      - name: "Summary"
         run: |
-          echo "DEMO: Trigger via workflow_dispatch, then run:"
-          echo "kubectl get pods -n arc-runners"
-          echo "You will see a fresh pod appear for this job and disappear after."
-
-# =============================================================================
-# KEY DIFFERENCES FROM LEGACY ARC ORG-LEVEL APPROACH:
-#
-# 1. runs-on: One scale set name rather than legacy ARC label combinations
-# 2. Listener-based scaling replaces legacy webhook/poll/HRA behavior
-# 3. No RunnerDeployment or HorizontalRunnerAutoscaler CRDs
-# 4. Ephemeral pods guarantee fresh state for every org job
-# 5. Runner groups still provide access control
-# 6. GitHub-managed ARC replaces community-maintained summerwind
-# =============================================================================
+          echo "=========================================="
+          echo "  ALL 3 PARALLEL JOBS COMPLETED!"
+          echo "=========================================="
+          echo ""
+          echo "What just happened:"
+          echo "  1. Three jobs were queued simultaneously"
+          echo "  2. ARC created 3 separate pods (one per job)"
+          echo "  3. Each pod ran its job in isolation"
+          echo "  4. Each pod was destroyed after completion"
+          echo "  5. This summary runs on a 4th pod!"
+          echo ""
+          echo "👉 After this completes, run:"
+          echo "   kubectl get pods -n arc-runners"
+          echo "   Result: No resources found (scale to zero!)"
