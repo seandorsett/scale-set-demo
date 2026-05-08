@@ -7,7 +7,7 @@ spec:
   replicas: 2
   template:
     spec:
-      repository: seandorsett/super-tribble
+      repository: seandorsett/scale-set-demo
       labels:
         - legacy-arc
         - repo-demo

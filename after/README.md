@@ -15,7 +15,7 @@ This is the part of the presentation that uses the **actual runner scale set** o
 Trigger a workflow from GitHub Actions or with:
 
 ```bash
-gh workflow run "workflow-name" --repo seandorsett/super-tribble
+gh workflow run "workflow-name" --repo seandorsett/scale-set-demo
 ```
 
 While the workflow starts, watch the cluster with:

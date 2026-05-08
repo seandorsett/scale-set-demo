@@ -19,7 +19,7 @@ set -euo pipefail
 
 NAMESPACE="actions-runner-system"
 RELEASE_NAME="actions-runner-controller"
-GITHUB_CONFIG_URL="https://github.com/seandorsett/super-tribble"
+GITHUB_CONFIG_URL="https://github.com/seandorsett/scale-set-demo"
 
 echo "==> Step 1: Install cert-manager (required dependency)"
 echo "PAIN POINT: Legacy ARC requires cert-manager before the controller can run."
@@ -54,7 +54,7 @@ spec:
   replicas: 2
   template:
     spec:
-      repository: seandorsett/super-tribble
+      repository: seandorsett/scale-set-demo
       labels:
         - legacy-arc
         - repo-demo
@@ -86,7 +86,7 @@ spec:
   metrics:
     - type: TotalNumberOfQueuedAndInProgressWorkflowRuns
       repositoryNames:
-        - seandorsett/super-tribble
+        - seandorsett/scale-set-demo
 EOF
 
 kubectl apply -f horizontal-runner-autoscaler.yaml

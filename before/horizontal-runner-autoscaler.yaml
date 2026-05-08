@@ -13,4 +13,4 @@ spec:
   metrics:
     - type: TotalNumberOfQueuedAndInProgressWorkflowRuns
       repositoryNames:
-        - seandorsett/super-tribble
+        - seandorsett/scale-set-demo

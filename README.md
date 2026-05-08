@@ -11,7 +11,7 @@ This presentation is ready for a **real-time ARC modernization demo** against a 
 - Kubernetes cluster is running
 - ARC controller is installed in the `arc-systems` namespace
 - Runner scale set `arc-runner-set-repo` is deployed in the `arc-runners` namespace
-- GitHub repository is `seandorsett/super-tribble`
+- GitHub repository is `seandorsett/scale-set-demo`
 
 ### Verify before you present
 
@@ -23,7 +23,7 @@ Optional quick checks:
 
 ```bash
 kubectl get pods -n arc-runners
-gh workflow list --repo seandorsett/super-tribble
+gh workflow list --repo seandorsett/scale-set-demo
 ```
 
 ### Keep these commands ready during the demo
@@ -37,8 +37,8 @@ kubectl get pods -n arc-runners -w
 Use a second terminal for GitHub workflow triggers:
 
 ```bash
-gh workflow run "workflow-name" --repo seandorsett/super-tribble
-gh run list --repo seandorsett/super-tribble --limit 5
+gh workflow run "workflow-name" --repo seandorsett/scale-set-demo
+gh run list --repo seandorsett/scale-set-demo --limit 5
 ```
 
 What you want the audience to see:
@@ -251,14 +251,14 @@ kubectl get horizontalrunnerautoscalers -A
 kubectl get pods -n arc-runners -w
 
 # See recent workflow runs
-gh run list --repo seandorsett/super-tribble --limit 10
+gh run list --repo seandorsett/scale-set-demo --limit 10
 
 # Trigger a legacy ARC "before" workflow
-gh workflow run "workflow-name" --repo seandorsett/super-tribble
+gh workflow run "workflow-name" --repo seandorsett/scale-set-demo
 
 # Trigger a Runner Scale Sets "after" workflow
-gh workflow run "workflow-name" --repo seandorsett/super-tribble
+gh workflow run "workflow-name" --repo seandorsett/scale-set-demo
 
 # Inspect a specific run after triggering
-gh run view --repo seandorsett/super-tribble
+gh run view --repo seandorsett/scale-set-demo
 ```

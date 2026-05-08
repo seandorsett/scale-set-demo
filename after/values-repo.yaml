@@ -14,7 +14,7 @@
 runnerScaleSetName: "arc-runner-set-repo"
 
 ## GitHub configuration
-githubConfigUrl: "https://github.com/seandorsett/super-tribble"
+githubConfigUrl: "https://github.com/seandorsett/scale-set-demo"
 
 ## Authentication — using a pre-created Kubernetes secret (recommended)
 ## Create with: kubectl create secret generic github-pat-secret \

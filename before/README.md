@@ -73,7 +73,7 @@ spec:
   replicas: 2
   template:
     spec:
-      repository: seandorsett/super-tribble
+      repository: seandorsett/scale-set-demo
       labels:
         - legacy-arc
         - repo-demo
@@ -102,7 +102,7 @@ spec:
   metrics:
     - type: TotalNumberOfQueuedAndInProgressWorkflowRuns
       repositoryNames:
-        - seandorsett/super-tribble
+        - seandorsett/scale-set-demo
 ```
 
 ## Pain Points to Highlight
