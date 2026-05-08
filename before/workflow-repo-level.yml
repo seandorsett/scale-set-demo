@@ -1,0 +1,64 @@
+# =============================================================================
+# BEFORE: Traditional Self-Hosted Runner Workflow (Repository Level)
+# =============================================================================
+# This workflow targets a traditional self-hosted runner registered directly
+# to a specific repository.
+#
+# PRESENTATION TALKING POINT:
+# "With traditional runners, you reference labels. Multiple runners may share
+#  the same labels, but there's no guarantee of clean state or capacity."
+# =============================================================================
+
+name: "CI Pipeline (Traditional - Repo Runner)"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    # Traditional approach: reference runner by labels
+    # PAIN POINT: No guarantee which specific machine picks up the job
+    # PAIN POINT: Runner state may be dirty from previous jobs
+    runs-on: [self-hosted, linux, x64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # PAIN POINT: Must manually clean workspace — runners persist state
+      - name: Clean workspace (workaround for persistent runners)
+        run: |
+          echo "⚠️  Cleaning leftover artifacts from previous jobs..."
+          rm -rf node_modules dist .cache
+          echo "This step is necessary because traditional runners retain state!"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, linux, x64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying from a traditional self-hosted runner..."
+          echo "⚠️  NOTE: This runner may have credentials cached from other jobs"
+          echo "⚠️  NOTE: No isolation between jobs on the same runner"

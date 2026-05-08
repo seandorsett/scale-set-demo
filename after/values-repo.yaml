@@ -1,0 +1,53 @@
+# =============================================================================
+# Helm Values: Runner Scale Set (Repository Level)
+# =============================================================================
+# This values file configures a runner scale set for a specific repository.
+# It demonstrates the declarative, version-controllable nature of ARC.
+#
+# PRESENTATION TALKING POINT:
+# "Everything is in a YAML file. Infrastructure as Code for your CI runners."
+# =============================================================================
+
+## The name of the runner scale set (used as 'runs-on' value in workflows)
+runnerScaleSetName: "arc-runner-set-repo"
+
+## GitHub configuration
+githubConfigUrl: "https://github.com/your-org/your-repo"
+
+## Authentication — using a pre-created Kubernetes secret (recommended)
+## Create with: kubectl create secret generic github-pat-secret \
+##   --namespace=arc-runners --from-literal=github_token=<PAT>
+githubConfigSecret: github-pat-secret
+
+## Auto-scaling configuration
+## KEY FEATURE: Dynamic scaling based on job demand
+maxRunners: 10       # Never exceed 10 runners (cost control)
+minRunners: 0        # Scale to zero when idle (cost savings)
+
+## Runner pod template
+## KEY FEATURE: Customize the runner environment declaratively
+template:
+  spec:
+    containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:latest
+        command: ["/home/runner/run.sh"]
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+        env:
+          - name: RUNNER_FEATURE_FLAG_ONCE
+            value: "true"    # Ensures ephemeral behavior
+
+## Container mode (DinD for Docker-in-Docker support)
+# containerMode:
+#   type: "dind"
+
+## Annotations for monitoring/observability
+# metadata:
+#   annotations:
+#     prometheus.io/scrape: "true"

@@ -1,0 +1,66 @@
+# =============================================================================
+# BEFORE: Traditional Self-Hosted Runner Workflow (Organization Level)
+# =============================================================================
+# This workflow targets a traditional self-hosted runner registered at the
+# organization level. The runner is shared across multiple repositories.
+#
+# PRESENTATION TALKING POINT:
+# "Org-level runners are shared, but scaling them means manually provisioning
+#  more machines. There's no dynamic scale-up/down based on demand."
+# =============================================================================
+
+name: "CI Pipeline (Traditional - Org Runner)"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    # Org-level runner — typically placed in a runner group
+    # PAIN POINT: Runner groups help with access control but don't solve scaling
+    # PAIN POINT: If all runners are busy, jobs queue indefinitely
+    runs-on:
+      group: production-runners
+      labels: [self-hosted, linux, x64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # PAIN POINT: Shared runner = potential for cross-repo contamination
+      - name: Verify clean environment
+        run: |
+          echo "⚠️  Checking for leftover files from other repositories..."
+          echo "On shared org runners, different repos' secrets and artifacts"
+          echo "may have been present on this same machine."
+          ls -la /tmp/ | head -20
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest --verbose
+
+      - name: Security scan
+        run: |
+          echo "Running security scan..."
+          echo "⚠️  On persistent runners, previously-installed packages"
+          echo "    from other repos remain in the system"
+
+  notify:
+    needs: build
+    runs-on:
+      group: production-runners
+      labels: [self-hosted, linux, x64]
+    if: failure()
+    steps:
+      - name: Notify team
+        run: echo "Build failed — but how do we know it's not a runner issue?"

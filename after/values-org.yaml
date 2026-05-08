@@ -1,0 +1,75 @@
+# =============================================================================
+# Helm Values: Runner Scale Set (Organization Level)
+# =============================================================================
+# This values file configures a runner scale set for an entire organization.
+# Runners are shared across repos, controlled by runner groups.
+#
+# PRESENTATION TALKING POINT:
+# "Org-level scale sets combine shared infrastructure with access control.
+#  Runner groups determine which repos can use these runners."
+# =============================================================================
+
+## The name of the runner scale set (used as 'runs-on' value in workflows)
+runnerScaleSetName: "arc-runner-set-org"
+
+## GitHub configuration — targets the organization
+githubConfigUrl: "https://github.com/your-org"
+
+## Authentication — GitHub App recommended for org-level (better security)
+## Create secret: kubectl create secret generic github-app-secret \
+##   --namespace=arc-runners-org \
+##   --from-literal=github_app_id=123456 \
+##   --from-literal=github_app_installation_id=654321 \
+##   --from-file=github_app_private_key=private-key.pem
+githubConfigSecret: github-app-secret
+
+## Runner group — controls which repos can access these runners
+## Must be created in GitHub org settings first
+runnerGroup: "production-runners"
+
+## Auto-scaling configuration
+## KEY FEATURE: Always have warm runners ready, with a ceiling
+maxRunners: 50       # Handle peak demand
+minRunners: 2        # Always keep 2 runners warm (reduces job start latency)
+
+## Runner pod template — beefier for org-wide workloads
+template:
+  spec:
+    containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:latest
+        command: ["/home/runner/run.sh"]
+        resources:
+          requests:
+            cpu: "1000m"
+            memory: "2Gi"
+          limits:
+            cpu: "4000m"
+            memory: "8Gi"
+    # Node selection for dedicated runner nodes
+    nodeSelector:
+      role: github-runners
+    # Tolerations for dedicated nodes
+    tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "github-runners"
+        effect: "NoSchedule"
+
+## TLS configuration (for GitHub Enterprise Server)
+# githubServerTLS:
+#   certificateFrom:
+#     configMapKeyRef:
+#       name: github-server-cert
+#       key: ca.crt
+#   runnerMountPath: /usr/local/share/ca-certificates/
+
+## Proxy configuration (for air-gapped environments)
+# proxy:
+#   http:
+#     url: http://proxy.internal:3128
+#   https:
+#     url: http://proxy.internal:3128
+#   noProxy:
+#     - github.com
+#     - ghcr.io

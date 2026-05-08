@@ -1,0 +1,83 @@
+# =============================================================================
+# AFTER: Workflow Using Runner Scale Set (Repository Level)
+# =============================================================================
+# This workflow uses a runner scale set instead of traditional self-hosted
+# runners. Notice how much simpler and more secure it is.
+#
+# PRESENTATION TALKING POINT:
+# "The workflow author just changes 'runs-on' to the scale set name.
+#  Everything else — scaling, state isolation, registration — is automatic."
+# =============================================================================
+
+name: "CI Pipeline (Runner Scale Set - Repo Level)"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    # NEW: Reference the runner scale set by name (the INSTALLATION_NAME)
+    # No labels needed — the scale set name IS the identifier
+    runs-on: arc-runner-set-repo
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # NO cleanup step needed!
+      # Runners are EPHEMERAL — fresh container for every job
+      # This is cleaner, faster, and more secure.
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+  deploy:
+    needs: build
+    runs-on: arc-runner-set-repo
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: dist/
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying from an ephemeral runner scale set pod..."
+          echo "✅ No cached credentials from previous jobs"
+          echo "✅ No filesystem contamination from other workflows"
+          echo "✅ This pod will be destroyed after this job completes"
+
+# =============================================================================
+# KEY DIFFERENCES FROM TRADITIONAL APPROACH:
+# 
+# 1. runs-on: Uses scale set name instead of label array
+# 2. No cleanup steps: Runners are ephemeral (fresh every job)
+# 3. Auto-scaling: ARC creates a pod on demand, destroys after
+# 4. Security: No state leakage between jobs
+# 5. Cost: Scales to zero when no jobs are queued
+# =============================================================================

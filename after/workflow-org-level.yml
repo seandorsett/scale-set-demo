@@ -1,0 +1,88 @@
+# =============================================================================
+# AFTER: Workflow Using Runner Scale Set (Organization Level)
+# =============================================================================
+# This workflow uses an org-level runner scale set. The scale set belongs to
+# a runner group that controls access across the organization.
+#
+# PRESENTATION TALKING POINT:
+# "Org-level scale sets give you shared infrastructure with auto-scaling.
+#  Runner groups control which repos get access — same as before, but now
+#  with dynamic capacity."
+# =============================================================================
+
+name: "CI Pipeline (Runner Scale Set - Org Level)"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    # NEW: Reference the org-level runner scale set by name
+    # The scale set is in the 'production-runners' runner group
+    runs-on: arc-runner-set-org
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # NO environment verification needed!
+      # Each job gets a fresh pod — guaranteed clean state
+      # No cross-repo contamination possible
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest --verbose
+
+      - name: Security scan
+        run: |
+          echo "Running security scan..."
+          echo "✅ Guaranteed clean environment — no leftover packages"
+          echo "✅ No other repo has ever run on this exact pod"
+          pip install safety
+          safety check
+
+  performance-test:
+    needs: build
+    runs-on: arc-runner-set-org
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run performance tests
+        run: |
+          echo "Running performance tests on a dedicated ephemeral runner..."
+          echo "✅ Consistent results — no noisy neighbors from previous jobs"
+          echo "✅ Resource limits enforced by Kubernetes (see values-org.yaml)"
+          echo "✅ If we need more capacity, ARC scales up automatically"
+
+  notify:
+    needs: [build, performance-test]
+    runs-on: arc-runner-set-org
+    if: failure()
+    steps:
+      - name: Notify team
+        run: |
+          echo "Build failed — but we KNOW it's not a runner state issue!"
+          echo "✅ Ephemeral runners eliminate 'works on my runner' problems"
+
+# =============================================================================
+# KEY DIFFERENCES FROM TRADITIONAL ORG-LEVEL APPROACH:
+#
+# 1. runs-on: Scale set name (not group + labels combo)
+# 2. Auto-scaling: 2 warm runners, scales up to 50 on demand
+# 3. No cleanup: Ephemeral pods = guaranteed fresh state
+# 4. Cost efficient: Scales down to minRunners during quiet periods
+# 5. Runner groups: Still used for access control (configured in values.yaml)
+# 6. Security: Kubernetes namespace isolation + ephemeral pods
+# =============================================================================
