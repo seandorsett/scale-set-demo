@@ -1,0 +1,16 @@
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: HorizontalRunnerAutoscaler
+metadata:
+  name: legacy-arc-repo-runners-autoscaler
+  namespace: actions-runner-system
+spec:
+  scaleTargetRef:
+    kind: RunnerDeployment
+    name: legacy-arc-repo-runners
+  minReplicas: 2
+  maxReplicas: 10
+  scaleDownDelaySecondsAfterScaleOut: 300
+  metrics:
+    - type: TotalNumberOfQueuedAndInProgressWorkflowRuns
+      repositoryNames:
+        - seandorsett/super-tribble

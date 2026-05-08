@@ -2,13 +2,15 @@
 # Helm Values: Runner Scale Set (Repository Level)
 # =============================================================================
 # This values file configures a runner scale set for a specific repository.
-# It demonstrates the declarative, version-controllable nature of ARC.
+# Instead of writing separate RunnerDeployment and HorizontalRunnerAutoscaler
+# objects like legacy ARC, we keep everything in one Helm values file.
 #
 # PRESENTATION TALKING POINT:
-# "Everything is in a YAML file. Infrastructure as Code for your CI runners."
+# "This replaces the old RunnerDeployment YAML sprawl with one values file."
 # =============================================================================
 
-## The name of the runner scale set (used as 'runs-on' value in workflows)
+## The scale set name is the single routing label used in workflows.
+## Legacy ARC often needed label arrays plus separate RunnerDeployment objects.
 runnerScaleSetName: "arc-runner-set-repo"
 
 ## GitHub configuration
@@ -20,12 +22,13 @@ githubConfigUrl: "https://github.com/seandorsett/super-tribble"
 githubConfigSecret: github-pat-secret
 
 ## Auto-scaling configuration
-## KEY FEATURE: Dynamic scaling based on job demand
+## Legacy ARC split this behavior across RunnerDeployment + HRA resources.
+## Runner Scale Sets keep it here and allow true scale-to-zero.
 maxRunners: 10       # Never exceed 10 runners (cost control)
 minRunners: 0        # Scale to zero when idle (cost savings)
 
 ## Runner pod template
-## KEY FEATURE: Customize the runner environment declaratively
+## Still declarative, but much simpler than managing multiple legacy ARC CRDs.
 template:
   spec:
     containers:
@@ -41,7 +44,7 @@ template:
             memory: "4Gi"
         env:
           - name: RUNNER_FEATURE_FLAG_ONCE
-            value: "true"    # Ensures ephemeral behavior
+            value: "true"    # Ensures per-job ephemeral behavior
 
 ## Container mode (DinD for Docker-in-Docker support)
 # containerMode:

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory demonstrates the **modern approach** to self-hosted runners using **Actions Runner Controller (ARC)** and **Runner Scale Sets**. This replaces the manual, static approach with declarative, auto-scaling infrastructure.
+This directory demonstrates the **modern GitHub-supported ARC model** using **Runner Scale Sets**. The "before" state is **legacy ARC** (summerwind controller with `RunnerDeployment` and `HorizontalRunnerAutoscaler` CRDs). The "after" state keeps Kubernetes-based runners, but replaces that older ARC architecture with a simpler Helm-based model.
 
 ## 🖥️ Live Demo
 
@@ -27,9 +27,9 @@ kubectl get pods -n arc-runners -w
 
 What to show:
 
-- The listener/controller is already in place before the workflow starts
-- A new runner pod appears in `arc-runners` when the workflow is queued
-- The pod exists only for the duration of the job
+- The controller and listener are already in place before the workflow starts
+- A new runner pod appears in `arc-runners` only when a job is queued
+- Unlike legacy ARC's pre-created runner pool, the pod exists only for that job
 - After the run completes, the runner pod is destroyed automatically
 
 This is the key "aha" moment: **run workflow → watch pod appear → job finishes → pod disappears**.
@@ -46,104 +46,80 @@ This is the key "aha" moment: **run workflow → watch pod appear → job finish
 | `workflow-repo-level.yml` | Workflow using repo-level scale set |
 | `workflow-org-level.yml` | Workflow using org-level scale set |
 
-## How Runner Scale Sets Work
+## Runner Scale Sets vs. Legacy ARC
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         GitHub.com                               │
-│                                                                  │
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐                     │
-│  │  Repo A │    │  Repo B │    │  Repo C │                     │
-│  └────┬────┘    └────┬────┘    └────┬────┘                     │
-│       │               │              │                           │
-│       └───────────────┼──────────────┘                          │
-│                       │ Jobs assigned to scale set               │
-│                       ▼                                          │
-│            ┌─────────────────────┐                              │
-│            │  Runner Scale Set   │ ◄── Single label/name        │
-│            │  "arc-runner-set"   │     assignment                │
-│            └──────────┬──────────┘                              │
-└───────────────────────┼─────────────────────────────────────────┘
-                        │ Scale set assignment
-                        ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  Kubernetes Cluster                              │
-│                                                                  │
-│  ┌──────────────────────────────────────┐  arc-systems ns       │
-│  │  ARC Controller                       │                      │
-│  │  • Monitors GitHub for queued jobs   │                      │
-│  │  • Creates runner pods on demand     │                      │
-│  │  • Destroys pods after job completes │                      │
-│  └──────────────────┬───────────────────┘                      │
-│                     │                                           │
-│  ┌──────────────────┼────────────────────┐  arc-runners ns     │
-│  │                  ▼                     │                      │
-│  │  ┌──────┐  ┌──────┐  ┌──────┐        │                     │
-│  │  │Pod 1 │  │Pod 2 │  │Pod 3 │  ...   │ ← Auto-scaled      │
-│  │  │ 🆕   │  │ 🆕   │  │ 🆕   │        │   Ephemeral         │
-│  │  │fresh!│  │fresh!│  │fresh!│        │   Clean state ✅    │
-│  │  └──┬───┘  └──┬───┘  └──┬───┘        │                     │
-│  │     │ job     │ job     │ job         │                     │
-│  │     │ done    │ done    │ done        │                     │
-│  │     ▼         ▼         ▼             │                     │
-│  │  💥 destroyed after each job 💥       │                     │
-│  └───────────────────────────────────────┘                      │
-└─────────────────────────────────────────────────────────────────┘
+LEGACY ARC (before)                              RUNNER SCALE SETS (after)
+
+GitHub job queue                                GitHub job queue
+      │                                                │
+      ▼                                                ▼
+summerwind controller                           GitHub ARC controller
+      │                                          + listener
+      │                                                │
+      ▼                                                ▼
+RunnerDeployment CRD                            Helm release + values.yaml
+HorizontalRunnerAutoscaler CRD                        │
+      │                                                │
+      ▼                                                ▼
+Pre-created runner pool                         Pod created only when job queues
+(often idle even with no work)                  (listener-driven scaling)
+      │                                                │
+      ▼                                                ▼
+Long-lived registration tokens                  Short-lived per-job tokens
+More YAML / CRD management                      No RunnerDeployment / HRA CRDs
+cert-manager commonly required                  No cert-manager dependency
+community-maintained summerwind                 GitHub-managed and supported
 ```
 
 ## Benefits (Presentation Talking Points)
 
-### ✅ Automatic Scaling
-- **Scale to zero**: No cost when idle (minRunners: 0)
-- **Scale to demand**: Runners created as jobs arrive
-- **Cost ceiling**: maxRunners prevents runaway costs
-- **Warm capacity**: minRunners keeps runners ready for fast starts
+### ✅ Simpler Installation than Legacy ARC
+- **No cert-manager dependency**
+- **Official GitHub Helm charts**, not the legacy summerwind controller
+- **No CRD YAML management** for `RunnerDeployment` or `HorizontalRunnerAutoscaler`
+- One controller install plus one Helm release per scale set
 
-### ✅ Ephemeral Runners (Security & Reliability)
+### ✅ Better Scaling Model
+- **Listener-based scaling** instead of legacy ARC webhook/poll patterns
+- **Per-job ephemeral runners** instead of a pre-created legacy runner pool
+- **Scale to zero** when idle, instead of always paying for idle runners
+- `maxRunners` still provides a clear safety ceiling
+
+### ✅ Simpler Routing and Operations
+- **Single label/name per scale set** keeps workflow routing straightforward
+- One `values.yaml` file replaces multiple legacy ARC custom resources
+- Easier upgrades through standard Helm workflows
+- GitHub-managed architecture reduces operational guesswork
+
+### ✅ Stronger Security Posture
+- **Short-lived per-job tokens** instead of long-lived registration tokens
 - Fresh pod for every job — **no state drift**
-- No credentials leaked between jobs
-- No cross-repository contamination
-- Deterministic builds — same environment every time
-
-### ✅ Declarative Configuration
-- Everything in version-controlled YAML files
-- Reproducible deployments via Helm
-- No imperative scripts or manual steps
-- Easy to audit and review changes
-
-### ✅ Centralized Management
-- One ARC controller manages all runner scale sets
-- Runner groups for access control
-- Kubernetes-native monitoring and alerting
-- Rolling updates via Helm upgrades
-
-### ✅ Authentication
-- GitHub App authentication (no PAT rotation needed)
-- Kubernetes secrets for credential management
-- No tokens stored on runner filesystems
+- No credentials or workspace leftovers between jobs
+- Cleaner isolation across repos and workloads
 
 ## Deployment Flow (Automated)
 
 ```
 Platform Team                    Kubernetes                      GitHub
      │                               │                              │
-     │── helm install arc ───────────►│                              │
-     │   (one time)                   │── Controller pod starts ────►│
+     │── helm install controller ────►│                              │
+     │   (one time, official chart)   │── Controller starts ───────►│
      │                               │                              │
      │── helm install scale-set ─────►│                              │
-     │   (per scale set)              │── Listener connects ────────►│
+     │   (no CRDs to author)          │── Listener connects ───────►│
      │                               │                              │
      │                               │◄─── Job queued ─────────────│
      │                               │                              │
-     │                               │── Create runner pod          │
+     │                               │── Create one runner pod      │
      │                               │── Pod executes job ─────────►│
      │                               │── Pod destroyed ✅           │
      │                               │                              │
      │   (automatic from here)        │◄─── More jobs ─────────────│
-     │                               │── Scale up pods...           │
+     │                               │── Create more pods as needed │
      │                               │                              │
-     │                               │   (idle timeout)             │
-     │                               │── Scale down to minRunners   │
+     │                               │   (idle)                     │
+     │                               │── Scale down to zero/min     │
 ```
 
 ## Repo vs. Org Level Comparison
@@ -159,11 +135,12 @@ Platform Team                    Kubernetes                      GitHub
 
 ## Key Metrics to Highlight
 
-| Metric | Runner Scale Sets |
-|--------|-------------------|
-| Time to add capacity | Seconds (automatic) |
-| Scale-up time | ~30 seconds (pod startup) |
-| Scale-down | Automatic (configurable) |
-| State isolation | Complete (ephemeral pods) |
-| Recovery from failure | Automatic (Kubernetes restarts) |
-| Configuration drift | Eliminated (declarative) |
+| Metric | Runner Scale Sets | Legacy ARC |
+|--------|-------------------|------------|
+| Capacity model | Per-job ephemeral pods | Pre-created runner pool |
+| Scale trigger | Listener-based | Webhook/poll/HRA driven |
+| Idle cost | Can scale to zero | Often idle runners remain |
+| Routing | Single scale set label/name | Multiple labels / CRDs |
+| Token model | Short-lived per-job tokens | Long-lived registration tokens |
+| Kubernetes objects | Helm release + values | RunnerDeployment + HRA CRDs |
+| Support model | GitHub-managed | Community-maintained summerwind |

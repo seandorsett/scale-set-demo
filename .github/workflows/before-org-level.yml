@@ -1,76 +1,54 @@
 # =============================================================================
-# BEFORE: Traditional Self-Hosted Runner Workflow (Organization Level)
+# BEFORE: Legacy ARC Workflow (Organization Level)
 # =============================================================================
-# This workflow simulates the traditional org-level self-hosted approach for a
-# LIVE demo. It runs on ubuntu-latest so the presenter can trigger it anytime,
-# but the comments and echo statements highlight the shared-runner pain points.
+# This workflow simulates the old org-level ARC model for the live demo while
+# running safely on ubuntu-latest.
 # =============================================================================
 
-name: "CI Pipeline (Traditional - Org Runner)"
+name: "CI Pipeline (Legacy ARC - Org Level)"
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   build:
     # LIVE DEMO NOTE:
-    # This uses GitHub-hosted ubuntu-latest for demo reliability.
-    # In a real traditional org-runner setup this would target a shared runner
-    # group with self-hosted labels.
+    # We are using ubuntu-latest for demo reliability.
+    # In legacy ARC, an org-level runner setup might have used labels such as:
+    # runs-on: [self-hosted, linux, x64, legacy-arc, org-shared]
+    # Access would also be controlled through GitHub runner groups at the org level.
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Explain org-level traditional pain points
+      - name: Explain org-level legacy ARC differences
         run: |
-          echo "🎭 LIVE DEMO: Simulating a traditional ORG-LEVEL self-hosted runner"
-          echo "This job runs on ubuntu-latest so it is safe to trigger live."
-          echo "In a real org-level setup, multiple repositories may share the same long-lived machines."
-          echo "Cross-repo contamination is a concern because shared state can leak between jobs."
-          echo "If all shared runners are busy, jobs queue until capacity is manually added."
+          echo "🎭 LIVE DEMO: Simulating legacy ARC at the organization level"
+          echo "At org scope, teams often shared RunnerDeployments and label conventions."
+          echo "GitHub runner groups controlled which repos could use those runners."
+          echo "But scaling and pod management still lived in legacy ARC CRDs."
 
-      - name: Simulate shared workspace inspection
+      - name: Highlight org-level scaling complexity
         run: |
-          echo "Repository contents after checkout:"
-          ls -la
-          echo "On a real org-level self-hosted runner, files from another repository could still be present."
-          echo "Shared tools, caches, and temp data can make behavior inconsistent between teams."
+          echo "Legacy ARC org-level pain points:"
+          echo "- Shared RunnerDeployments require cross-team label coordination"
+          echo "- HorizontalRunnerAutoscaler still needs careful min/max tuning"
+          echo "- Webhook-based scaling adds more moving parts at org scale"
+          echo "- Idle shared pools still burn cluster capacity between jobs"
 
-      - name: Simulate build and validation
+      - name: Simulate org-level build
         run: |
-          echo "🔧 Simulating shared runner build"
-          echo "Pretend we restored dependencies and ran repository validation."
-          echo "Traditional pain point: globally installed tools may differ between teams and repositories."
-          echo "Traditional pain point: one team's customization can affect another team's jobs."
+          echo "🔧 Simulating an org-level build"
+          echo "With legacy ARC, this job might run on a long-lived shared runner pod."
+          echo "That pod could be reused by many workflows over time."
+          echo "Operationally, platform teams own more YAML, more CRDs, and more scaling config."
 
-      - name: Simulate security and compliance concerns
+      - name: Summarize org-level runner group story
         run: |
-          echo "🔐 Simulating security scan"
-          echo "On persistent org runners, previously-installed packages from other repos remain on the machine."
-          echo "Shared state increases the blast radius when secrets or credentials are mishandled."
-
-      - name: Manual cleanup on shared runner
-        run: |
-          echo "🧹 Simulating manual cleanup on a shared org runner"
-          rm -rf .demo-temp shared-cache || true
-          echo "Without deliberate cleanup, the next repository inherits whatever was left on disk."
-
-  notify:
-    needs: build
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Summarize shared-runner overhead
-        run: |
-          echo "📣 Org-level traditional runner summary"
-          echo "If this were a real shared self-hosted runner:"
-          echo "- Multiple repositories could leave state behind on the same machine"
-          echo "- Capacity planning would be manual"
-          echo "- Troubleshooting often starts with 'is it the runner or the code?'"
-          echo "- Cleanup and standardization become a platform engineering burden"
+          echo "Org-level legacy ARC summary:"
+          echo "- GitHub runner groups decide repository access"
+          echo "- ARC labels on RunnerDeployment decide job placement"
+          echo "- HorizontalRunnerAutoscaler decides pool size"
+          echo "- Platform teams manage the complexity across all of it"

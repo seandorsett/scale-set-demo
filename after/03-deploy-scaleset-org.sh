@@ -3,11 +3,12 @@
 # AFTER: Deploy Runner Scale Set (Organization Level)
 # =============================================================================
 # This script deploys a runner scale set at the organization level.
-# It can serve jobs from any repository in the org (controlled by runner groups).
+# It can serve jobs from any repository in the org (controlled by runner groups)
+# without using the legacy ARC RunnerDeployment CRD model.
 #
 # PRESENTATION TALKING POINT:
-# "Organization-level scale sets serve multiple repos. Combined with runner
-#  groups, you get fine-grained access control WITH auto-scaling."
+# "Legacy ARC needed multiple CRDs and pre-created runners.
+#  Here, one Helm release gives shared capacity plus ephemeral runners."
 # =============================================================================
 
 set -e
@@ -27,6 +28,8 @@ echo "  Runner Group:   production-runners"
 echo ""
 
 # --- Deploy the runner scale set ---------------------------------------------
+# Compared to legacy ARC, there is no RunnerDeployment YAML to create and no
+# HorizontalRunnerAutoscaler resource to tune separately.
 helm upgrade --install "${INSTALLATION_NAME}" \
   --namespace "${NAMESPACE}" \
   --create-namespace \
@@ -45,10 +48,12 @@ echo ""
 echo "=============================================="
 echo "✅ Org-Level Runner Scale Set deployed!"
 echo ""
-echo "KEY FEATURES:"
+echo "KEY DIFFERENCES FROM LEGACY ARC:"
 echo "  ✓ Serves all repos in the organization"
 echo "  ✓ Runner group 'production-runners' controls access"
-echo "  ✓ Scales 2-50 runners based on job demand"
-echo "  ✓ 2 idle runners always warm (minRunners: 2)"
-echo "  ✓ Ephemeral — no cross-repo state contamination"
+echo "  ✓ Single scale set name replaces multi-label RunnerDeployment routing"
+echo "  ✓ Listener-based scaling reacts to queued jobs"
+echo "  ✓ Ephemeral runners avoid cross-repo state contamination"
+echo "  ✓ Short-lived per-job tokens replace legacy registration tokens"
+echo "  ✓ GitHub-supported ARC replaces community-maintained summerwind"
 echo "=============================================="

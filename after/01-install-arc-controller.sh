@@ -2,12 +2,12 @@
 # =============================================================================
 # AFTER: Install Actions Runner Controller (ARC)
 # =============================================================================
-# This script installs the ARC controller into your Kubernetes cluster.
-# ARC is the foundation that manages runner scale sets.
+# This script installs the modern GitHub-supported ARC controller into your
+# Kubernetes cluster. It replaces the legacy summerwind controller approach.
 #
 # PRESENTATION TALKING POINT:
-# "One controller installation manages ALL your runner scale sets.
-#  It handles registration, scaling, and lifecycle automatically."
+# "Compared to legacy ARC, this install is simpler:
+#  no cert-manager dependency, no summerwind chart, and no CRD YAML wrangling."
 # =============================================================================
 
 set -e
@@ -16,7 +16,7 @@ set -e
 # • A Kubernetes cluster (AKS, EKS, GKE, or local like kind/minikube)
 # • Helm 3.x installed
 # • kubectl configured with cluster access
-# • cert-manager (recommended for production)
+# • No cert-manager required for Runner Scale Sets
 
 echo "🚀 Installing Actions Runner Controller (ARC)"
 echo "================================================"
@@ -29,7 +29,9 @@ echo "📁 Creating controller namespace: ${CONTROLLER_NAMESPACE}"
 kubectl create namespace "${CONTROLLER_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
 
 # --- Step 2: Install the ARC controller via Helm ----------------------------
-# This is a ONE-TIME setup — manages all runner scale sets centrally
+# Unlike legacy ARC, this uses GitHub's official Helm chart directly.
+# No summerwind controller chart and no extra CRD manifests to manage.
+# This is a ONE-TIME setup — manages all runner scale sets centrally.
 echo "📦 Installing ARC controller via Helm..."
 
 helm install arc \
@@ -47,8 +49,10 @@ echo "✅ ARC Controller installed successfully!"
 echo ""
 echo "WHAT JUST HAPPENED:"
 echo "  • Controller pod is running in '${CONTROLLER_NAMESPACE}'"
+echo "  • This is the GitHub-managed controller, not legacy summerwind ARC"
+echo "  • No cert-manager was required for this installation"
 echo "  • It will manage all runner scale sets you deploy"
-echo "  • It communicates with GitHub API to receive job assignments"
+echo "  • It communicates with GitHub through the listener-based scale set model"
 echo "  • It creates/destroys runner pods based on demand"
 echo ""
 echo "NEXT STEPS:"

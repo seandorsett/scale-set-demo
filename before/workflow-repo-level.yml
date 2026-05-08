@@ -1,85 +1,53 @@
 # =============================================================================
-# BEFORE: Traditional Self-Hosted Runner Workflow (Repository Level)
+# BEFORE: Legacy ARC Workflow (Repository Level)
 # =============================================================================
-# This workflow simulates the traditional repo-level self-hosted approach for a
-# LIVE demo. It intentionally runs on ubuntu-latest so the presenter can launch
-# it on demand, while the comments and log output call out the real pain points
-# of managing persistent self-hosted runners.
+# This workflow is for the live demo. It runs on ubuntu-latest so it can be
+# triggered reliably, but the comments and log output describe the OLD
+# RunnerDeployment-based ARC experience.
 # =============================================================================
 
-name: "CI Pipeline (Traditional - Repo Runner)"
+name: "CI Pipeline (Legacy ARC - Repo Level)"
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   build:
     # LIVE DEMO NOTE:
-    # This runs on GitHub-hosted infrastructure for reliability during the demo.
-    # In a real traditional setup this would typically be:
-    # runs-on: [self-hosted, linux, x64]
+    # We are NOT running legacy ARC in the demo environment.
+    # With legacy ARC, this would typically have looked like:
+    # runs-on: [self-hosted, linux, x64, legacy-arc, repo-demo]
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Explain traditional runner pain points
+      - name: Explain legacy ARC repo-level model
         run: |
-          echo "🎭 LIVE DEMO: Simulating a traditional REPO-LEVEL self-hosted runner"
-          echo "This workflow runs on ubuntu-latest so it is easy to trigger live."
-          echo "On a real self-hosted runner, this workspace would have leftover files from the last job."
-          echo "No auto-scaling - if this runner is busy, your job queues indefinitely."
-          echo "A platform owner would need to patch, monitor, and troubleshoot the runner VM."
+          echo "🎭 LIVE DEMO: Simulating legacy ARC at the repository level"
+          echo "Real legacy ARC used RunnerDeployment labels to route jobs."
+          echo "Runners were often pre-created as a warm pool before jobs arrived."
+          echo "That means idle runners still consumed cluster resources."
+          echo "Scaling usually required HorizontalRunnerAutoscaler plus extra tuning."
 
-      - name: Inspect workspace like an operator would
+      - name: Highlight repo-level pain points
         run: |
-          echo "Repository contents after checkout:"
-          ls -la
-          echo "On a real self-hosted runner, operators often inspect the filesystem to debug state drift."
-          echo "If the previous job left artifacts behind, this build inherits them."
+          echo "Legacy ARC repo-level pain points:"
+          echo "- Labels assigned on the RunnerDeployment CRD"
+          echo "- Long-lived runner pods handled multiple jobs over time"
+          echo "- Complex webhook or pull-based autoscaling configuration"
+          echo "- More YAML and CRD management for platform teams"
 
-      - name: Simulate build setup
+      - name: Simulate build
         run: |
-          echo "🔧 Simulating dependency restore"
-          echo "This is where npm ci, dotnet restore, or pip install would normally run."
-          echo "Traditional pain point: old caches and dependencies may already exist on disk."
-          echo "Traditional pain point: cleanup scripts become part of the pipeline just to stay reliable."
+          echo "🔧 Simulating a build on a legacy ARC runner"
+          echo "In reality, this job may have landed on an already-running pooled runner."
+          echo "If the warm pool is oversized, you pay idle cost."
+          echo "If the autoscaler is misconfigured, jobs queue anyway."
 
-      - name: Simulate test execution
+      - name: Summarize before-state overhead
         run: |
-          echo "🧪 Simulating test run"
-          echo "In a real self-hosted environment, failures may come from runner drift instead of application code."
-          echo "Examples: leftover temp files, modified permissions, stale containers, or changed environment variables."
-
-      - name: Simulate artifact build
-        run: |
-          echo "🏗️ Simulating application build"
-          echo "Build complete"
-          echo "Real self-hosted concern: credentials, Docker layers, and artifacts may persist across jobs."
-
-      - name: Manual cleanup required on traditional runners
-        run: |
-          echo "🧹 Manual cleanup step"
-          rm -rf .demo-temp leftover-artifacts || true
-          echo "On a real self-hosted runner, this cleanup is operational overhead you must remember to add."
-          echo "Miss it once and the next job inherits whatever was left behind."
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Simulate deploy talking points
-        run: |
-          echo "🚀 Simulating deployment from a traditional self-hosted runner"
-          echo "On a real self-hosted runner, this machine may still have cached credentials from another workflow."
-          echo "There is no per-job isolation like you get from ephemeral runners."
-          echo "If the single repo runner is offline, this deployment waits until someone fixes it."
+          echo "Before state summary:"
+          echo "Legacy ARC = RunnerDeployment + RunnerReplicaSet + Runner + HRA"
+          echo "Plus cert-manager, controller management, and scaling complexity"

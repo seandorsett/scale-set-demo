@@ -1,12 +1,12 @@
 # =============================================================================
 # AFTER: Workflow Using Runner Scale Set (Repository Level)
 # =============================================================================
-# This workflow uses a runner scale set instead of traditional self-hosted
-# runners. Notice how much simpler and more secure it is.
+# This workflow uses a runner scale set instead of legacy ARC's
+# RunnerDeployment-based runner pool. Notice how much simpler it is.
 #
 # PRESENTATION TALKING POINT:
 # "The workflow author just changes 'runs-on' to the scale set name.
-#  Everything else — scaling, state isolation, registration — is automatic."
+#  No RunnerDeployment YAML, no HRA object, and no pre-created idle pool."
 # =============================================================================
 
 name: "CI Pipeline (Runner Scale Set - Repo Level)"
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
   # DEMO: Run this manually, then immediately run:
   # kubectl get pods -n arc-runners
-  # You'll see ARC create a fresh ephemeral runner pod for this job.
+  # You'll see Runner Scale Sets create a fresh pod for this job only.
   push:
     branches: [main]
   pull_request:
@@ -31,12 +31,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Explain ephemeral runner benefits
+      - name: Explain legacy ARC contrast
         run: |
-          echo "✅ This is a fresh ephemeral pod - no leftover state!"
-          echo "✅ ARC created this runner only when the job was queued"
-          echo "✅ When this workflow finishes, Kubernetes destroys the pod"
-          echo "✅ No cached credentials, tools, or workspace from prior runs"
+          echo "✅ Unlike legacy ARC's pre-created runner pool, this pod was created just for this job"
+          echo "✅ Runner Scale Sets use listener-based scaling instead of legacy webhook or poll loops"
+          echo "✅ This runner uses a short-lived per-job token, not a long-lived registration token"
+          echo "✅ When this workflow finishes, Kubernetes destroys the pod automatically"
 
       - name: Show pod identity
         run: |
@@ -49,7 +49,7 @@ jobs:
           echo "Restoring dependencies..."
           echo "Running unit tests..."
           echo "Building application artifact..."
-          echo "CI completed on ephemeral runner pod $(hostname)"
+          echo "CI completed on per-job ephemeral runner pod $(hostname)"
 
       - name: Explain pod teardown
         run: |
@@ -58,11 +58,11 @@ jobs:
           echo "The runner pod used for this job will be gone."
 
 # =============================================================================
-# KEY DIFFERENCES FROM TRADITIONAL APPROACH:
+# KEY DIFFERENCES FROM LEGACY ARC:
 # 
-# 1. runs-on: Uses scale set name instead of label array
-# 2. No cleanup steps: Runners are ephemeral (fresh every job)
-# 3. Auto-scaling: ARC creates a pod on demand, destroys after
-# 4. Security: No state leakage between jobs
-# 5. Cost: Scales to zero when no jobs are queued
+# 1. runs-on: Uses one scale set label/name instead of legacy multi-label routing
+# 2. No RunnerDeployment or HorizontalRunnerAutoscaler CRDs
+# 3. Per-job ephemeral pods replace a pre-created runner pool
+# 4. Listener-based scaling creates capacity only when jobs queue
+# 5. Scale-to-zero removes idle cost when no jobs are queued
 # =============================================================================

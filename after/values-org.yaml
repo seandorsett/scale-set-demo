@@ -2,14 +2,15 @@
 # Helm Values: Runner Scale Set (Organization Level)
 # =============================================================================
 # This values file configures a runner scale set for an entire organization.
-# Runners are shared across repos, controlled by runner groups.
+# Legacy ARC required separate RunnerDeployment and autoscaler resources;
+# Runner Scale Sets consolidate that complexity into a single values file.
 #
 # PRESENTATION TALKING POINT:
-# "Org-level scale sets combine shared infrastructure with access control.
-#  Runner groups determine which repos can use these runners."
+# "Org-level scale sets keep runner groups, but remove the old CRD sprawl."
 # =============================================================================
 
-## The name of the runner scale set (used as 'runs-on' value in workflows)
+## The scale set name becomes the single workflow target.
+## This is simpler than legacy ARC's multi-label RunnerDeployment routing.
 runnerScaleSetName: "arc-runner-set-org"
 
 ## GitHub configuration — targets the organization
@@ -28,11 +29,13 @@ githubConfigSecret: github-app-secret
 runnerGroup: "production-runners"
 
 ## Auto-scaling configuration
-## KEY FEATURE: Always have warm runners ready, with a ceiling
+## Unlike legacy ARC, scaling behavior lives in this one values file instead of
+## a separate HorizontalRunnerAutoscaler resource. Runner Scale Sets can scale
+## to zero; this example keeps 2 warm runners only to reduce org-wide latency.
 maxRunners: 50       # Handle peak demand
-minRunners: 2        # Always keep 2 runners warm (reduces job start latency)
+minRunners: 2        # Warm capacity for demo/org latency; set 0 for scale-to-zero
 
-## Runner pod template — beefier for org-wide workloads
+## Runner pod template — still customizable without extra RunnerDeployment YAML
 template:
   spec:
     containers:

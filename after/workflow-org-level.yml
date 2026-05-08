@@ -2,12 +2,12 @@
 # AFTER: Workflow Using Runner Scale Set (Organization Level)
 # =============================================================================
 # This workflow uses an org-level runner scale set. The scale set belongs to
-# a runner group that controls access across the organization.
+# a runner group that controls access across the organization without using
+# legacy ARC's RunnerDeployment-based runner pools.
 #
 # PRESENTATION TALKING POINT:
-# "Org-level scale sets give you shared infrastructure with auto-scaling.
-#  Runner groups control which repos get access — same as before, but now
-#  with dynamic capacity."
+# "Org-level scale sets keep runner groups, but replace legacy ARC's
+#  pre-created pools with listener-driven ephemeral capacity."
 # =============================================================================
 
 name: "CI Pipeline (Runner Scale Set - Org Level)"
@@ -33,10 +33,11 @@ jobs:
 
       - name: Explain org-level advantages
         run: |
-          echo "✅ Org-level runners let multiple repositories share one runner platform"
+          echo "✅ Org-level scale sets let multiple repositories share one GitHub-supported runner platform"
           echo "✅ Runner groups still control which repos get access"
-          echo "✅ Every job still lands on a fresh ephemeral pod"
-          echo "✅ Centralized capacity with auto-scaling is easier to operate"
+          echo "✅ Unlike legacy ARC's warm pool, each job still lands on a fresh ephemeral pod"
+          echo "✅ No RunnerDeployment or HorizontalRunnerAutoscaler CRDs are needed"
+          echo "✅ Each job uses a short-lived token instead of legacy registration tokens"
 
       - name: Show pod identity
         run: |
@@ -49,7 +50,7 @@ jobs:
           echo "Repository checked out on shared runner platform"
           echo "Running reusable org policy checks..."
           echo "Running standardized test stage..."
-          echo "Job executed on ephemeral pod $(hostname)"
+          echo "Job executed on listener-created ephemeral pod $(hostname)"
 
       - name: Explain live demo
         run: |
@@ -58,12 +59,12 @@ jobs:
           echo "You will see a fresh pod appear for this job and disappear after."
 
 # =============================================================================
-# KEY DIFFERENCES FROM TRADITIONAL ORG-LEVEL APPROACH:
+# KEY DIFFERENCES FROM LEGACY ARC ORG-LEVEL APPROACH:
 #
-# 1. runs-on: Scale set name (not group + labels combo)
-# 2. Auto-scaling: 2 warm runners, scales up to 50 on demand
-# 3. No cleanup: Ephemeral pods = guaranteed fresh state
-# 4. Cost efficient: Scales down to minRunners during quiet periods
-# 5. Runner groups: Still used for access control (configured in values.yaml)
-# 6. Security: Kubernetes namespace isolation + ephemeral pods
+# 1. runs-on: One scale set name rather than legacy ARC label combinations
+# 2. Listener-based scaling replaces legacy webhook/poll/HRA behavior
+# 3. No RunnerDeployment or HorizontalRunnerAutoscaler CRDs
+# 4. Ephemeral pods guarantee fresh state for every org job
+# 5. Runner groups still provide access control
+# 6. GitHub-managed ARC replaces community-maintained summerwind
 # =============================================================================

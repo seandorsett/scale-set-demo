@@ -1,173 +1,190 @@
-# Architecture Comparison: Traditional vs. Runner Scale Sets
+# Architecture Comparison: Legacy ARC vs. Runner Scale Sets
 
-## Side-by-Side Architecture
+This demo now compares a **customer's current state (legacy ARC)** with the **upgrade target (Runner Scale Sets)**.
 
-### Traditional Self-Hosted Runners
+## Side-by-Side Architecture Diagrams
 
+### Legacy ARC
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                LEGACY ARC                                   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  GitHub.com                                                                  │
+│      │                                                                       │
+│      ├── Webhook events / API polling                                        │
+│      ▼                                                                       │
+│  HorizontalRunnerAutoscaler                                                  │
+│      │                                                                       │
+│      ▼                                                                       │
+│  ARC Controller (summerwind)                                                 │
+│      │                                                                       │
+│      ├── manages RunnerDeployment CRD                                        │
+│      ├── creates RunnerReplicaSet CRD                                        │
+│      └── keeps runner pods pre-created                                       │
+│      ▼                                                                       │
+│  RunnerDeployment ──► RunnerReplicaSet ──► Runner Pods (idle pool)          │
+│                                                                              │
+│                      ▲                                                       │
+│                      │                                                       │
+│                cert-manager                                                  │
+│                (dependency)                                                  │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                        TRADITIONAL                             │
-├───────────────────────────────────────────────────────────────┤
-│                                                               │
-│  GitHub.com ─── Jobs ──► Label Matching ──► Runner Pool       │
-│                                              │                │
-│                                    ┌─────────┼─────────┐     │
-│                                    ▼         ▼         ▼     │
-│                              ┌──────┐  ┌──────┐  ┌──────┐   │
-│                              │ VM 1 │  │ VM 2 │  │ VM 3 │   │
-│                              │      │  │      │  │      │   │
-│                              │ 🔴   │  │ 🔴   │  │ 🔴   │   │
-│                              │dirty │  │dirty │  │dirty │   │
-│                              │state │  │state │  │state │   │
-│                              └──────┘  └──────┘  └──────┘   │
-│                                 ▲         ▲         ▲        │
-│                                 │         │         │        │
-│                              Manual    Manual    Manual       │
-│                              setup     setup     setup        │
-│                                                               │
-│  Scaling: ❌ Manual          State: ❌ Persistent             │
-│  Recovery: ❌ Manual         Auth: ❌ Token-based              │
-│  Config: ❌ Imperative       Cost: ❌ Always running           │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
+
+- HorizontalRunnerAutoscaler watches webhook events or polls the GitHub API
+- Runners are long-lived and can process multiple jobs over time
+- Scaling depends on the CRD chain: `RunnerDeployment` → `RunnerReplicaSet` → runner pods
+
+### Runner Scale Sets
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           RUNNER SCALE SETS                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  GitHub.com                                                                  │
+│      │                                                                       │
+│      ▼                                                                       │
+│  Listener Pod                                                                │
+│      │                                                                       │
+│      ▼                                                                       │
+│  ARC Controller (GitHub official)                                            │
+│      │                                                                       │
+│      └── creates ephemeral runner pods on demand                             │
+│          ▼                                                                   │
+│      Ephemeral Runner Pods (one job per pod)                                 │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Runner Scale Sets (with ARC)
-
-```
-┌───────────────────────────────────────────────────────────────┐
-│                     RUNNER SCALE SETS                          │
-├───────────────────────────────────────────────────────────────┤
-│                                                               │
-│  GitHub.com ─── Jobs ──► Scale Set ──► ARC Controller         │
-│                                          │                    │
-│                              Kubernetes  │  (auto-managed)    │
-│                          ┌───────────────┼───────────────┐    │
-│                          │               ▼               │    │
-│                          │  ┌──────┐  ┌──────┐  ┌─────┐│    │
-│                          │  │Pod 1 │  │Pod 2 │  │ ... ││    │
-│                          │  │      │  │      │  │     ││    │
-│                          │  │ ✅   │  │ ✅   │  │ ✅  ││    │
-│                          │  │fresh │  │fresh │  │fresh││    │
-│                          │  │state │  │state │  │state││    │
-│                          │  └──┬───┘  └──┬───┘  └──┬──┘│    │
-│                          │     💥         💥        💥   │    │
-│                          │  (destroyed after each job)   │    │
-│                          └───────────────────────────────┘    │
-│                                                               │
-│  Scaling: ✅ Automatic     State: ✅ Ephemeral                │
-│  Recovery: ✅ Automatic    Auth: ✅ GitHub App / Secrets       │
-│  Config: ✅ Declarative    Cost: ✅ Scale to zero              │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
-```
+- No `cert-manager` dependency
+- Listener directly connects to the GitHub API
+- Pods are created for a job and destroyed immediately after it finishes
 
 ## Scaling Behavior Comparison
 
-### Traditional: Static Capacity
+### Legacy ARC: Pool-Based Scaling
 
-```
-Runners ▲
-   5    │ ████████████████████████████████████████████  (always 5)
-   4    │ ████████████████████████████████████████████
-   3    │ ████████████████████████████████████████████
-   2    │ ████████████████████████████████████████████
-   1    │ ████████████████████████████████████████████
-   0    ├────────────────────────────────────────────► Time
-        6am         12pm         6pm         12am
-        
-        Jobs: ░░▓▓▓▓▓▓▓▓░░░░▓▓▓▓▓░░░░░░░░░░░░░░░░░░
-        
-        ⚠️  Peak: Jobs queue (not enough runners)
-        ⚠️  Off-peak: Runners idle (wasted cost)
+```text
+Time ─────────────────────────────────────────────────────────────────────────►
+
+Queued jobs:      ▁▁▃▃▆▇▇▅▃▂▁
+Idle runner pool: ████ ████ ████ ████
+
+Behavior:
+- Capacity is managed as a pool of pre-created runners
+- HorizontalRunnerAutoscaler reacts to webhook or polling signals
+- Idle pods may sit waiting between bursts
+- Busy periods can still queue while the pool catches up
 ```
 
-### Runner Scale Sets: Dynamic Capacity
+### Runner Scale Sets: Per-Job Scaling
 
+```text
+Time ─────────────────────────────────────────────────────────────────────────►
+
+Queued jobs:      ▁▁▃▃▆▇▇▅▃▂▁
+Runner pods:      ▁▁▃▃▆▇▇▅▃▂▁
+
+Behavior:
+- Each queued job results in a fresh runner pod
+- Capacity tracks demand more directly
+- No need to keep a large idle pool warm
+- Pods disappear after the job completes
 ```
-Runners ▲
-  10    │              ██                               maxRunners: 10
-   8    │            ██████
-   6    │          ██████████
-   4    │        ██████████████        ████
-   2    │ ██████████████████████████████████████████   minRunners: 2
-   0    ├────────────────────────────────────────────► Time
-        6am         12pm         6pm         12am
-        
-        Jobs: ░░▓▓▓▓▓▓▓▓░░░░▓▓▓▓▓░░░░░░░░░░░░░░░░░░
-        
-        ✅ Peak: Auto-scales to handle demand
-        ✅ Off-peak: Scales down to save cost
-        ✅ Cost-capped: Never exceeds maxRunners
-```
+
+## CRD / Manifest Complexity Comparison
+
+| Area | Legacy ARC | Runner Scale Sets |
+|------|------------|-------------------|
+| Primary scaling objects | `RunnerDeployment`, `RunnerReplicaSet`, `HorizontalRunnerAutoscaler` | Scale set + listener + ephemeral runners |
+| Scaling model | Multi-CRD chain | Simplified control loop |
+| Dependency footprint | Includes `cert-manager` | No `cert-manager` required |
+| Manifest sprawl | More objects to explain and troubleshoot | Fewer moving parts |
+| Operational model | Summerwind-era ARC patterns | GitHub-official runner scale set model |
 
 ## Job Lifecycle Comparison
 
-### Traditional Runner
+### Legacy ARC
 
-```
-Time ──►
-
-Job 1 arrives:                    Job 2 arrives:
-┌─────────────────────────┐      ┌─────────────────────────┐
-│ Runner picks up job      │      │ Same runner picks up    │
-│ ├─ checkout              │      │ ├─ checkout             │
-│ ├─ install deps          │      │ ├─ ⚠️  old deps cached  │
-│ ├─ run tests             │      │ ├─ run tests            │
-│ ├─ build                 │      │ ├─ ⚠️  old build cached │
-│ └─ job complete          │      │ └─ job complete         │
-│                          │      │                         │
-│ Runner PERSISTS ─────────┼─────►│ STATE CARRIED OVER ⚠️   │
-│ • node_modules remains   │      │ • stale packages        │
-│ • build cache remains    │      │ • potential conflicts   │
-│ • env vars may leak      │      │ • unpredictable builds  │
-└─────────────────────────┘      └─────────────────────────┘
+```text
+Job arrives
+   │
+   ▼
+Existing runner pod picks up work
+   │
+   ├─ checkout
+   ├─ build/test/deploy
+   └─ job finishes
+   │
+   ▼
+Runner pod stays alive
+   ├─ caches remain
+   ├─ workspace can persist
+   └─ same runner may process the next job
 ```
 
-### Runner Scale Set (Ephemeral)
+### Runner Scale Sets
 
+```text
+Job arrives
+   │
+   ▼
+Listener signals ARC
+   │
+   ▼
+Fresh runner pod is created
+   │
+   ├─ checkout
+   ├─ build/test/deploy
+   └─ job finishes
+   │
+   ▼
+Runner pod is destroyed
+   ├─ no reused workspace
+   ├─ no residual processes
+   └─ next job gets a brand-new pod
 ```
-Time ──►
 
-Job 1 arrives:                    Job 2 arrives:
-┌─────────────────────────┐      ┌─────────────────────────┐
-│ ARC creates Pod          │      │ ARC creates NEW Pod     │
-│ ├─ checkout              │      │ ├─ checkout             │
-│ ├─ install deps          │      │ ├─ fresh deps install   │
-│ ├─ run tests             │      │ ├─ run tests            │
-│ ├─ build                 │      │ ├─ clean build          │
-│ └─ job complete          │      │ └─ job complete         │
-│                          │      │                         │
-│ Pod DESTROYED 💥 ────────┘      │ Pod DESTROYED 💥        │
-│ • Nothing persists               │ • Nothing persists      │
-│ • Clean slate guaranteed         │ • Deterministic builds  │
-│ • No security leaks              │ • No "works on my      │
-│                                  │    runner" issues       │
-└──────────────────────────       └─────────────────────────┘
-```
+## Component Comparison Table
 
-## Component Comparison
+| Component | Legacy ARC | Runner Scale Sets |
+|-----------|------------|-------------------|
+| Controller | Summerwind ARC controller | GitHub-official ARC controller |
+| Event intake | Webhook and/or polling via HRA | Listener pod |
+| Scale trigger | HorizontalRunnerAutoscaler | Listener-driven demand |
+| Runner abstraction | `RunnerDeployment` / `RunnerReplicaSet` | Scale set runners |
+| Runner lifetime | Long-lived | Ephemeral |
+| Warm capacity | Idle pool of ready runners | Optional minimums, otherwise on-demand |
+| Extra dependency | `cert-manager` | None required for this flow |
+| Operational focus | Maintain pool health | Fulfill jobs per pod |
 
-| Component | Traditional | Runner Scale Sets |
-|-----------|-------------|-------------------|
-| **Runner registration** | Manual script + token | Helm chart + GitHub App |
-| **Scaling** | Human operator | ARC controller (automatic) |
-| **Runner lifecycle** | Long-lived (days/months) | Ephemeral (minutes) |
-| **Configuration** | Per-machine scripts | Centralized values.yaml |
-| **Updates** | Manual SSH + restart | Helm upgrade (rolling) |
-| **Monitoring** | Custom (varies) | Kubernetes-native |
-| **Cost model** | Fixed (always running) | Variable (scale to zero) |
-| **State** | Persistent (risky) | Ephemeral (clean) |
-| **Network** | Direct internet | Kubernetes networking + proxy support |
-| **Recovery** | Manual restart | Automatic (Kubernetes) |
+## Security Comparison Table
 
-## Security Comparison
+| Security Aspect | Legacy ARC | Runner Scale Sets |
+|----------------|------------|-------------------|
+| Job isolation | Lower — runner pods can serve multiple jobs | Higher — one pod per job |
+| Workspace reuse | Possible | Eliminated by default |
+| Residual process risk | Higher on long-lived runners | Reduced with pod teardown |
+| Credential exposure window | Longer-lived runner lifetime | Shorter-lived runner lifetime |
+| Attack surface | More components, including `cert-manager` | Fewer components |
+| Drift over time | More likely on persistent runners | Reduced through fresh pods |
 
-| Security Aspect | Traditional | Runner Scale Sets |
-|----------------|-------------|-------------------|
-| Job isolation | ❌ Shared filesystem | ✅ Separate pods |
-| Credential handling | ❌ Tokens on disk | ✅ K8s secrets |
-| Cross-repo leakage | ❌ Possible | ✅ Prevented |
-| Network isolation | ❌ Shared network | ✅ Namespace policies |
-| Privilege escalation | ❌ Often root | ✅ Pod security contexts |
-| Audit trail | ❌ Manual logging | ✅ K8s audit logs |
+## Migration Path Notes
+
+- Treat this as an **ARC-to-ARC modernization**, not a move from standalone runners
+- The "before" state is already Kubernetes-based, but it uses the **legacy summerwind model**
+- The upgrade path is about replacing:
+  - webhook / polling-based HRA scaling
+  - `RunnerDeployment` / `RunnerReplicaSet` objects
+  - long-lived runner pools
+  - `cert-manager` dependency
+- The target state is:
+  - listener-based job intake
+  - GitHub-official ARC
+  - ephemeral per-job runners
+  - simpler manifests and operations
+- Presentation framing: **same platform goal, cleaner architecture**

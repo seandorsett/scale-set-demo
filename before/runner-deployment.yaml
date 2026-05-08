@@ -1,0 +1,18 @@
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: legacy-arc-repo-runners
+  namespace: actions-runner-system
+spec:
+  replicas: 2
+  template:
+    spec:
+      repository: seandorsett/super-tribble
+      labels:
+        - legacy-arc
+        - repo-demo
+      dockerdWithinRunnerContainer: true
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "1Gi"
