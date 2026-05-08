@@ -16,7 +16,7 @@ set -e
 INSTALLATION_NAME="arc-runner-set-repo"    # This becomes the 'runs-on' value!
 NAMESPACE="arc-runners"                     # Isolated from controller namespace
 GITHUB_CONFIG_URL="https://github.com/your-org/your-repo"
-GITHUB_PAT="<your-pat-here>"              # Or use GitHub App (see values-repo.yaml)
+GITHUB_PAT="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"              # Or use GitHub App (see values-repo.yaml)
 
 echo "🚀 Deploying Runner Scale Set (Repository Level)"
 echo "=================================================="
